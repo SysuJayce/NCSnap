@@ -1,4 +1,4 @@
-name: NetCup Snap
+name: NCSnap
 
 on:
   workflow_dispatch:
@@ -6,7 +6,7 @@ on:
     - cron: '0 0 * * *'
 
 jobs:
-  NetCup-Snap:
+  NCSnap:
     runs-on: ubuntu-latest
     env:
       TZ: Asia/Shanghai
