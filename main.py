@@ -429,8 +429,8 @@ def main():
         logger.info(f"处理账户: {len(accounts)} 个")
         logger.info(f"成功处理服务器: {total_success}/{total_servers_processed} 个")
         
-        if total_success < total_servers_processed:
-            logger.warning(f"失败服务器数量: {total_servers_processed - total_success}")
+        # if total_success < total_servers_processed:
+        #     logger.warning(f"失败服务器数量: {total_servers_processed - total_success}")
         
     except Exception as e:
         logger.error(f"程序执行失败: {str(e)}")
