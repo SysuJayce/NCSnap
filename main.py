@@ -42,10 +42,7 @@ def get_config():
     nc_username = os.getenv('NC_USERNAME', '')
     nc_password = os.getenv('NC_PASSWORD', '')
     nc_servers = os.getenv('NC_SERVERS', '')
-    snap_count = os.getenv('SNAP_COUNT', '1')
-    
-    # 显示原始环境变量值用于调试
-    logger.info(f"环境变量 SNAP_COUNT 原始值: '{snap_count}'")
+    snap_count = os.getenv('SNAP_COUNT', '')
     
     # 验证必需参数
     if not nc_username or not nc_password:
@@ -68,10 +65,8 @@ def get_config():
         if keep_count < 1:
             logger.warning("SNAP_COUNT 格式错误，使用默认值: 1")
             keep_count = 1
-        else:
-            logger.info(f"解析后的保留快照数量: {keep_count}")
     except ValueError:
-        logger.warning(f"SNAP_COUNT 值 '{snap_count}' 无法转换为整数，使用默认值: 1")
+        logger.warning("SNAP_COUNT 格式错误，使用默认值: 1")
         keep_count = 1
     
     return nc_username, nc_password, servers, keep_count
@@ -95,8 +90,6 @@ def setup_browser():
     
     # 禁用图片加载以提高速度
     co.no_imgs(True)
-    
-    logger.info("浏览器配置: 无头模式 + 无痕模式")
     return co
 
 def login_scp(page, username, password):
@@ -122,7 +115,6 @@ def login_scp(page, username, password):
         raise Exception("账号或密码错误，登录失败")
     elif '/Home' in current_url:
         logger.info("登录成功")
-        logger.info(f"已跳转到: {current_url}")
         return True
     else:
         logger.warning(f"未知页面状态: {current_url}")
@@ -221,14 +213,13 @@ def cleanup_old_snapshots(page, current_snapshot, keep_count):
             all_snapshots.append(snapshot_name)
     
     logger.info(f"当前共有 {len(all_snapshots)} 个快照")
-    logger.info(f"设置保留数量: {keep_count}")
     
     # 按创建时间排序（最新的在最后）
     all_snapshots.sort()
     
     # 计算需要删除的快照
     if len(all_snapshots) <= keep_count:
-        logger.info(f"快照数量 ({len(all_snapshots)}) 小于等于保留数量 ({keep_count})，无需删除")
+        logger.info("无需删除快照，数量未超过限制")
         return
     
     # 保留最新的 keep_count 个，删除其余的
@@ -240,8 +231,7 @@ def cleanup_old_snapshots(page, current_snapshot, keep_count):
         return
     
     logger.info(f"需要删除 {len(snapshots_to_delete)} 个旧快照")
-    logger.info(f"将保留快照: {', '.join(snapshots_to_keep)}")
-    logger.info(f"将删除快照: {', '.join(snapshots_to_delete)}")
+    logger.info(f"保留快照: {', '.join(snapshots_to_keep)}")
     
     # 逐个删除
     for i, snapshot_to_delete in enumerate(snapshots_to_delete, 1):
@@ -300,8 +290,8 @@ def main():
     username, password, servers, keep_count = get_config()
     
     beijing_time = get_beijing_time()
-    logger.info("NetCup SCP 快照自动管理工具启动")
-    logger.info(f"当前北京时间: {beijing_time.strftime('%Y-%m-%d %H:%M:%S')}")
+    logger.info("NCSnap Go")
+    logger.info(f"{beijing_time.strftime('%Y-%m-%d %H:%M:%S')}")
     logger.info(f"目标服务器数量: {len(servers)}")
     logger.info(f"保留快照数量: {keep_count}")
     
