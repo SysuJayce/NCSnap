@@ -63,14 +63,13 @@ def get_config():
     try:
         keep_count = int(snap_count)
         if keep_count < 1:
-            logger.warning("SNAP_COUNT 格式错误，使用默认值: 1")
-            keep_count = 1
-    except ValueError:
-        logger.warning("SNAP_COUNT 格式错误，使用默认值: 1")
-        keep_count = 1
-    
-    return nc_username, nc_password, servers, keep_count
+            raise ValueError("SNAP_COUNT 必须 >= 1")
+    except ValueError as e:
+        logger.error(f"SNAP_COUNT 无效: {e}")
+        sys.exit(1)
 
+    return nc_username, nc_password, servers, keep_count
+    
 def setup_browser():
     """设置浏览器选项"""
     co = ChromiumOptions()
