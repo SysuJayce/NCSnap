@@ -42,7 +42,7 @@ def get_config():
     nc_username = os.getenv('NC_USERNAME', '')
     nc_password = os.getenv('NC_PASSWORD', '')
     nc_servers = os.getenv('NC_SERVERS', '')
-    snap_count = os.getenv('SNAP_COUNT', '')
+    snap_count = os.getenv('SNAP_COUNT', '1')
     
     # 验证必需参数
     if not nc_username or not nc_password:
@@ -63,13 +63,14 @@ def get_config():
     try:
         keep_count = int(snap_count)
         if keep_count < 1:
-            raise ValueError("SNAP_COUNT 必须 >= 1")
-    except ValueError as e:
-        logger.error(f"SNAP_COUNT 无效: {e}")
-        sys.exit(1)
-
-    return nc_username, nc_password, servers, keep_count
+            logger.warning("SNAP_COUNT 格式错误，使用默认值: 1")
+            keep_count = 1
+    except ValueError:
+        logger.warning("SNAP_COUNT 格式错误，使用默认值: 1")
+        keep_count = 1
     
+    return nc_username, nc_password, servers, keep_count
+
 def setup_browser():
     """设置浏览器选项"""
     co = ChromiumOptions()
