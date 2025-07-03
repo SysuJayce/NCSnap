@@ -255,7 +255,7 @@ def create_snapshot(page):
     return snapshot_name
 
 def cleanup_snapshots(page, keep_count):
-    """清理旧快照"""
+    """清理旧快照 - 直接删除页面最上面的快照（最旧的）"""
     logger.info(f"  开始清理快照 (保留 {keep_count} 个)")
     
     # 等待并刷新页面
@@ -263,7 +263,7 @@ def cleanup_snapshots(page, keep_count):
     page.ele('@id:sub_media_snapshot').click()
     time.sleep(20)
     
-    # 获取所有快照
+    # 获取所有快照行
     snapshot_rows = page.eles('xpath://table[@class="table table-striped"]//tbody/tr')
     all_snapshots = []
     
@@ -273,53 +273,52 @@ def cleanup_snapshots(page, keep_count):
             snapshot_name = name_cell.text.strip()
             all_snapshots.append(snapshot_name)
     
-    # 排序（最新的在最后）
-    all_snapshots.sort()
-    
-    # 计算需要删除的快照
-    if len(all_snapshots) <= keep_count:
+    # 计算需要删除的快照数量
+    total_count = len(all_snapshots)
+    if total_count <= keep_count:
         logger.info("    无需删除，快照数量未超限")
         return
     
-    # 保留最新的N个，删除其余
-    snapshots_to_keep = all_snapshots[-keep_count:]
-    snapshots_to_delete = [s for s in all_snapshots if s not in snapshots_to_keep]
+    # 需要删除的数量 = 总数 - 保留数量
+    delete_count = total_count - keep_count
     
-    logger.info(f"    需要删除 {len(snapshots_to_delete)} 个旧快照")
+    logger.info(f"    需要删除 {delete_count} 个旧快照 (总共{total_count}个)")
     
-    # 逐个删除
-    for i, snapshot_to_delete in enumerate(snapshots_to_delete, 1):
-        logger.info(f"    删除 ({i}/{len(snapshots_to_delete)}): {snapshot_to_delete}")
+    # 从最上面开始删除（最旧的）
+    for i in range(delete_count):
+        logger.info(f"    删除第 {i+1} 个旧快照")
         
-        # 重新获取页面元素
+        # 重新获取页面元素（因为删除操作会改变页面结构）
         snapshot_rows = page.eles('xpath://table[@class="table table-striped"]//tbody/tr')
         
-        # 查找目标行
-        target_row = None
-        for row in snapshot_rows:
-            name_cell = row.ele('tag:td')
-            if name_cell and name_cell.text.strip() == snapshot_to_delete:
-                target_row = row
-                break
-        
-        if target_row:
-            # 执行删除
-            delete_link = target_row.ele('xpath:.//a[contains(@onclick, "delete")]')
-            if delete_link:
-                delete_link.click()
-                time.sleep(1)
+        # 删除第一行（最上面的，最旧的）
+        if snapshot_rows:
+            first_row = snapshot_rows[0]
+            name_cell = first_row.ele('tag:td')
+            if name_cell:
+                snapshot_name = name_cell.text.strip()
+                logger.info(f"      删除快照: {snapshot_name}")
                 
-                confirm_button = page.ele('@id:confirmationModalButton')
-                if confirm_button:
-                    confirm_button.click()
-                    time.sleep(20)
-                    logger.info(f"      删除成功")
+                # 查找并点击删除链接
+                delete_link = first_row.ele('xpath:.//a[contains(@onclick, "delete")]')
+                if delete_link:
+                    delete_link.click()
+                    time.sleep(1)
+                    
+                    # 确认删除
+                    confirm_button = page.ele('@id:confirmationModalButton')
+                    if confirm_button:
+                        confirm_button.click()
+                        time.sleep(20)  # 等待删除完成
+                        logger.info(f"      删除成功")
+                    else:
+                        logger.warning(f"      删除失败: 未找到确认按钮")
                 else:
-                    logger.warning(f"      删除失败: 未找到确认按钮")
+                    logger.warning(f"      删除失败: 未找到删除按钮")
             else:
-                logger.warning(f"      删除失败: 未找到删除按钮")
+                logger.warning(f"      删除失败: 无法获取快照名称")
         else:
-            logger.warning(f"      删除失败: 未找到快照")
+            logger.warning(f"      删除失败: 无法获取快照行")
     
     logger.info("  快照清理完成")
 
@@ -402,11 +401,9 @@ def main():
     
     # 显示启动信息
     beijing_time = get_beijing_time()
-    total_servers = sum(len(account['servers']) for account in accounts)
     
     logger.info("NCSnap Start")
     logger.info(f"{beijing_time.strftime('%Y-%m-%d %H:%M:%S')}")
-    logger.info(f"{len(accounts)}个账户, {total_servers}个服务器")
     
     # 初始化浏览器
     browser_options = setup_browser()
@@ -433,7 +430,6 @@ def main():
         logger.info("=" * 60)
         logger.info("任务完成")
         logger.info(f"结束时间: {end_time.strftime('%Y-%m-%d %H:%M:%S')}")
-        logger.info(f"成功: {total_success}/{total_processed} 个服务器")
         
     except Exception as e:
         logger.error(f"程序执行失败: {str(e)}")
