@@ -28,5 +28,5 @@ jobs:
         NC_USERNAME: ${{ secrets.NC_USERNAME }}
         NC_PASSWORD: ${{ secrets.NC_PASSWORD }}
         NC_SERVERS: ${{ secrets.NC_SERVERS }}
-        SNAP_COUNT: ${{ secrets.SNAP_COUNT }}
+        SNAP_COUNT: ${{ vars.SNAP_COUNT }}
       run: python main.py
