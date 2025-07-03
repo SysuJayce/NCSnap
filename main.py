@@ -4,19 +4,37 @@
 # NetCup SCP 快照自动管理工具
 
 from DrissionPage import ChromiumPage, ChromiumOptions
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 import time
 import logging
 import os
 import sys
 
+# 设置北京时区
+BEIJING_TZ = timezone(timedelta(hours=8))
+
+# 自定义日志格式器，使用北京时间
+class BeijingFormatter(logging.Formatter):
+    def formatTime(self, record, datefmt=None):
+        dt = datetime.fromtimestamp(record.created, tz=BEIJING_TZ)
+        if datefmt:
+            return dt.strftime(datefmt)
+        return dt.strftime('%H:%M:%S')
+
 # 配置日志
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
+handler = logging.StreamHandler()
+handler.setFormatter(BeijingFormatter(
+    fmt='%(asctime)s - %(levelname)s - %(message)s',
     datefmt='%H:%M:%S'
-)
+))
+
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+logger.addHandler(handler)
+
+def get_beijing_time():
+    """获取北京时间"""
+    return datetime.now(tz=BEIJING_TZ)
 
 def get_config():
     """获取配置参数"""
@@ -72,8 +90,6 @@ def setup_browser():
     
     # 禁用图片加载以提高速度
     co.no_imgs(True)
-    
-    logger.info("浏览器配置: 无头模式 + 无痕模式")
     return co
 
 def login_scp(page, username, password):
@@ -146,8 +162,10 @@ def navigate_to_snapshots(page):
 
 def create_snapshot(page):
     """创建新快照"""
-    snapshot_name = datetime.now().strftime("%Y%m%d%H%M%S")
-    logger.info(f"开始创建快照: {snapshot_name}")
+    # 使用北京时间生成快照名称
+    beijing_time = get_beijing_time()
+    snapshot_name = beijing_time.strftime("%Y%m%d%H%M%S")
+    logger.info(f"开始创建快照: {snapshot_name} (北京时间: {beijing_time.strftime('%Y-%m-%d %H:%M:%S')})")
     
     page.ele('@id:snapshotName').input(snapshot_name)
     page.ele('@id:snapshotDescription').input("Auto snapshot")
@@ -272,7 +290,9 @@ def main():
     # 获取配置
     username, password, servers, keep_count = get_config()
     
-    logger.info("NetCup SCP 快照自动管理工具启动")
+    beijing_time = get_beijing_time()
+    logger.info("NCSnap")
+    logger.info(f"{beijing_time.strftime('%Y-%m-%d %H:%M:%S')}")
     logger.info(f"目标服务器数量: {len(servers)}")
     logger.info(f"保留快照数量: {keep_count}")
     
@@ -293,8 +313,10 @@ def main():
                 success_count += 1
         
         # 总结
+        end_time = get_beijing_time()
         logger.info("=" * 50)
         logger.info("任务执行完成")
+        logger.info(f"完成时间: {end_time.strftime('%Y-%m-%d %H:%M:%S')} (北京时间)")
         logger.info(f"成功处理: {success_count}/{len(servers)} 个服务器")
         if success_count < len(servers):
             logger.warning(f"失败数量: {len(servers) - success_count}")
