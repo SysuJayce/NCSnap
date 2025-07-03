@@ -144,7 +144,13 @@ def login_scp(page, username, password):
 
 def select_server(page, server_name):
     """选择指定的服务器"""
-    logger.info(f"选择服务器: {server_name}")
+    # 对服务器名称进行部分脱敏显示
+    if len(server_name) > 6:
+        masked_server = server_name[:3] + '*' * (len(server_name) - 6) + server_name[-3:]
+    else:
+        masked_server = server_name
+    
+    logger.info(f"选择服务器: {masked_server}")
     
     # 等待服务器选择器加载
     page.ele('@id:navSelect')
@@ -328,8 +334,14 @@ def cleanup_old_snapshots(page, current_snapshot, keep_count):
 
 def process_server(page, server_name, keep_count):
     """处理单个服务器的快照操作"""
+    # 对服务器名称进行部分脱敏显示
+    if len(server_name) > 6:
+        masked_server = server_name[:3] + '*' * (len(server_name) - 6) + server_name[-3:]
+    else:
+        masked_server = server_name
+    
     logger.info(f"=" * 50)
-    logger.info(f"开始处理服务器: {server_name}")
+    logger.info(f"开始处理服务器: {masked_server}")
     logger.info(f"=" * 50)
     
     try:
@@ -346,23 +358,27 @@ def process_server(page, server_name, keep_count):
         # 智能判断是否需要清理：如果创建后总数超过限制才进行清理
         future_count = current_count + 1  # 加上刚创建的快照
         if future_count > keep_count:
-            logger.info(f"创建后将有 {future_count} 个快照，超过限制 {keep_count}，需要清理")
             cleanup_old_snapshots(page, snapshot_name, keep_count)
-        else:
-            logger.info(f"创建后将有 {future_count} 个快照，未超过限制 {keep_count}，无需清理")
         
-        logger.info(f"服务器 {server_name} 处理完成")
+        logger.info(f"服务器 {masked_server} 处理完成")
         return True
         
     except Exception as e:
-        logger.error(f"服务器 {server_name} 处理失败: {str(e)}")
+        logger.error(f"服务器 {masked_server} 处理失败: {str(e)}")
         return False
 
 def process_account(page, account, account_index, total_accounts):
     """处理单个账户下的所有服务器"""
+    # 对用户名进行部分脱敏显示
+    username = account['username']
+    if len(username) > 4:
+        masked_username = username[:2] + '*' * (len(username) - 4) + username[-2:]
+    else:
+        masked_username = username
+    
     logger.info("=" * 60)
     logger.info(f"开始处理账户 {account_index}/{total_accounts}")
-    logger.info(f"用户名: {account['username']}")
+    logger.info(f"用户名: {masked_username}")
     logger.info(f"服务器数量: {len(account['servers'])}")
     logger.info(f"保留快照数量: {account['snap_count']}")
     logger.info("=" * 60)
@@ -393,7 +409,7 @@ def main():
     
     # 显示程序启动信息
     beijing_time = get_beijing_time()
-    logger.info("NCSnap Go - 多账户版本")
+    logger.info("NCSnap Go")
     logger.info(f"启动时间: {beijing_time.strftime('%Y-%m-%d %H:%M:%S')} (北京时间)")
     logger.info(f"配置账户数量: {len(accounts)}")
     
@@ -428,9 +444,6 @@ def main():
         logger.info(f"完成时间: {end_time.strftime('%Y-%m-%d %H:%M:%S')} (北京时间)")
         logger.info(f"处理账户: {len(accounts)} 个")
         logger.info(f"成功处理服务器: {total_success}/{total_servers_processed} 个")
-        
-        # if total_success < total_servers_processed:
-        #     logger.warning(f"失败服务器数量: {total_servers_processed - total_success}")
         
     except Exception as e:
         logger.error(f"程序执行失败: {str(e)}")
