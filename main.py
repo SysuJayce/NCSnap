@@ -115,7 +115,6 @@ def login_scp(page, username, password):
         raise Exception("账号或密码错误，登录失败")
     elif '/Home' in current_url:
         logger.info("登录成功")
-        logger.info(f"已跳转到: {current_url}")
         return True
     else:
         logger.warning(f"未知页面状态: {current_url}")
@@ -291,7 +290,7 @@ def main():
     username, password, servers, keep_count = get_config()
     
     beijing_time = get_beijing_time()
-    logger.info("NCSnap")
+    logger.info("NCSnap Go")
     logger.info(f"{beijing_time.strftime('%Y-%m-%d %H:%M:%S')}")
     logger.info(f"目标服务器数量: {len(servers)}")
     logger.info(f"保留快照数量: {keep_count}")
