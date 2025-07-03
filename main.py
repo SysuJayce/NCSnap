@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-# NetCup SCP 快照自动管理工具
+# NetCup SCP 多账户快照自动管理工具
 
 from DrissionPage import ChromiumPage, ChromiumOptions
 from datetime import datetime, timezone, timedelta
@@ -9,6 +9,7 @@ import time
 import logging
 import os
 import sys
+import json
 
 # 设置北京时区
 BEIJING_TZ = timezone(timedelta(hours=8))
@@ -36,40 +37,50 @@ def get_beijing_time():
     """获取北京时间"""
     return datetime.now(tz=BEIJING_TZ)
 
-def get_config():
-    """获取配置参数"""
-    # 从环境变量读取配置
-    nc_username = os.getenv('NC_USERNAME', '')
-    nc_password = os.getenv('NC_PASSWORD', '')
-    nc_servers = os.getenv('NC_SERVERS', '')
-    snap_count = os.getenv('SNAP_COUNT', '1')
+def load_config():
+    """从JSON文件加载配置"""
+    config_file = 'config.json'
     
-    # 验证必需参数
-    if not nc_username or not nc_password:
-        logger.error("缺少必需参数: NC_USERNAME 和 NC_PASSWORD")
+    if not os.path.exists(config_file):
+        logger.error(f"配置文件 {config_file} 不存在")
         sys.exit(1)
     
-    if not nc_servers:
-        logger.error("缺少必需参数: NC_SERVERS")
-        sys.exit(1)
-    
-    # 解析服务器列表
-    servers = [s.strip() for s in nc_servers.split(',') if s.strip()]
-    if not servers:
-        logger.error("NC_SERVERS 格式错误，应为: server1,server2")
-        sys.exit(1)
-    
-    # 解析保留快照数量
     try:
-        keep_count = int(snap_count)
-        if keep_count < 1:
-            logger.warning("SNAP_COUNT 格式错误，使用默认值: 1")
-            keep_count = 1
-    except ValueError:
-        logger.warning("SNAP_COUNT 格式错误，使用默认值: 1")
-        keep_count = 1
+        with open(config_file, 'r', encoding='utf-8') as f:
+            config = json.load(f)
+    except json.JSONDecodeError as e:
+        logger.error(f"配置文件格式错误: {e}")
+        sys.exit(1)
+    except Exception as e:
+        logger.error(f"读取配置文件失败: {e}")
+        sys.exit(1)
     
-    return nc_username, nc_password, servers, keep_count
+    # 验证配置格式
+    if 'accounts' not in config:
+        logger.error("配置文件缺少 'accounts' 字段")
+        sys.exit(1)
+    
+    if not config['accounts']:
+        logger.error("accounts 数组为空")
+        sys.exit(1)
+    
+    # 验证每个账户配置
+    for i, account in enumerate(config['accounts']):
+        required_fields = ['username', 'password', 'servers', 'snap_count']
+        for field in required_fields:
+            if field not in account:
+                logger.error(f"第 {i+1} 个账户缺少必需字段: {field}")
+                sys.exit(1)
+        
+        if not account['servers']:
+            logger.error(f"第 {i+1} 个账户的服务器列表为空")
+            sys.exit(1)
+        
+        if not isinstance(account['snap_count'], int) or account['snap_count'] < 1:
+            logger.error(f"第 {i+1} 个账户的 snap_count 必须是大于0的整数")
+            sys.exit(1)
+    
+    return config['accounts']
 
 def setup_browser():
     """设置浏览器选项"""
@@ -158,6 +169,13 @@ def navigate_to_snapshots(page):
     time.sleep(2)
     
     logger.info("已进入快照管理页面")
+
+def get_current_snapshot_count(page):
+    """获取当前快照数量"""
+    snapshot_rows = page.eles('xpath://table[@class="table table-striped"]//tbody/tr')
+    current_count = len(snapshot_rows)
+    logger.info(f"当前快照数量: {current_count}")
+    return current_count
 
 def create_snapshot(page):
     """创建新快照"""
@@ -275,8 +293,26 @@ def process_server(page, server_name, keep_count):
     try:
         select_server(page, server_name)
         navigate_to_snapshots(page)
+        
+        # 获取当前快照数量
+        current_count = get_current_snapshot_count(page)
+        
+        # 判断创建快照后是否需要删除
+        will_need_cleanup = (current_count + 1) > keep_count
+        
+        if will_need_cleanup:
+            logger.info(f"创建快照后将有 {current_count + 1} 个快照，超过限制 {keep_count} 个，需要清理")
+        else:
+            logger.info(f"创建快照后将有 {current_count + 1} 个快照，未超过限制 {keep_count} 个，无需清理")
+        
+        # 创建快照
         snapshot_name = create_snapshot(page)
-        cleanup_old_snapshots(page, snapshot_name, keep_count)
+        
+        # 根据预判结果决定是否执行清理
+        if will_need_cleanup:
+            cleanup_old_snapshots(page, snapshot_name, keep_count)
+        else:
+            logger.info("跳过快照清理，节省等待时间")
         
         logger.info(f"服务器 {server_name} 处理完成")
         return True
@@ -285,40 +321,71 @@ def process_server(page, server_name, keep_count):
         logger.error(f"服务器 {server_name} 处理失败: {str(e)}")
         return False
 
+def process_account(page, account, account_index, total_accounts):
+    """处理单个账户"""
+    username = account['username']
+    servers = account['servers']
+    keep_count = account['snap_count']
+    
+    logger.info(f"{'=' * 60}")
+    logger.info(f"开始处理账户 {account_index}/{total_accounts}: {username}")
+    logger.info(f"服务器数量: {len(servers)}, 保留快照数量: {keep_count}")
+    logger.info(f"{'=' * 60}")
+    
+    try:
+        # 登录账户
+        login_scp(page, username, account['password'])
+        
+        # 处理该账户下的所有服务器
+        success_count = 0
+        for i, server_name in enumerate(servers, 1):
+            logger.info(f"账户 {account_index} 服务器进度: {i}/{len(servers)}")
+            
+            if process_server(page, server_name, keep_count):
+                success_count += 1
+        
+        logger.info(f"账户 {username} 处理完成，成功: {success_count}/{len(servers)}")
+        return success_count, len(servers)
+        
+    except Exception as e:
+        logger.error(f"账户 {username} 处理失败: {str(e)}")
+        return 0, len(servers)
+
 def main():
-    # 获取配置
-    username, password, servers, keep_count = get_config()
+    # 加载配置
+    accounts = load_config()
     
     beijing_time = get_beijing_time()
-    logger.info("NCSnap Go")
+    logger.info("NCSnap Go - 多账户版本")
     logger.info(f"{beijing_time.strftime('%Y-%m-%d %H:%M:%S')}")
-    logger.info(f"目标服务器数量: {len(servers)}")
-    logger.info(f"保留快照数量: {keep_count}")
+    logger.info(f"配置的账户数量: {len(accounts)}")
+    
+    total_servers = sum(len(account['servers']) for account in accounts)
+    logger.info(f"总服务器数量: {total_servers}")
     
     # 设置浏览器
     browser_options = setup_browser()
     page = ChromiumPage(browser_options)
     
     try:
-        # 登录
-        login_scp(page, username, password)
+        total_success = 0
+        total_servers_processed = 0
         
-        # 处理每个服务器
-        success_count = 0
-        for i, server_name in enumerate(servers, 1):
-            logger.info(f"处理进度: {i}/{len(servers)}")
-            
-            if process_server(page, server_name, keep_count):
-                success_count += 1
+        # 处理每个账户
+        for i, account in enumerate(accounts, 1):
+            success_count, server_count = process_account(page, account, i, len(accounts))
+            total_success += success_count
+            total_servers_processed += server_count
         
         # 总结
         end_time = get_beijing_time()
-        logger.info("=" * 50)
-        logger.info("任务执行完成")
+        logger.info("=" * 60)
+        logger.info("所有任务执行完成")
         logger.info(f"完成时间: {end_time.strftime('%Y-%m-%d %H:%M:%S')} (北京时间)")
-        logger.info(f"成功处理: {success_count}/{len(servers)} 个服务器")
-        if success_count < len(servers):
-            logger.warning(f"失败数量: {len(servers) - success_count}")
+        logger.info(f"处理账户: {len(accounts)} 个")
+        logger.info(f"成功处理服务器: {total_success}/{total_servers_processed} 个")
+        if total_success < total_servers_processed:
+            logger.warning(f"失败数量: {total_servers_processed - total_success}")
         
     except Exception as e:
         logger.error(f"程序执行失败: {str(e)}")
