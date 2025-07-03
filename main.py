@@ -409,7 +409,7 @@ def main():
     
     # 显示程序启动信息
     beijing_time = get_beijing_time()
-    logger.info("NCSnap Go")
+    logger.info("NCSnap Start")
     logger.info(f"{beijing_time.strftime('%Y-%m-%d %H:%M:%S')}")
     # logger.info(f"配置账户数量: {len(accounts)}")
     
