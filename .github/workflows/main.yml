@@ -23,10 +23,9 @@ jobs:
         sudo apt-get update && sudo apt-get install -y google-chrome-stable
         pip install DrissionPage
         
+    - name: 创建配置文件
+      run: |
+        echo '${{ secrets.NC_CONFIG }}' > config.json
+        
     - name: NCSnap
-      env:
-        NC_USERNAME: ${{ secrets.NC_USERNAME }}
-        NC_PASSWORD: ${{ secrets.NC_PASSWORD }}
-        NC_SERVERS: ${{ secrets.NC_SERVERS }}
-        SNAP_COUNT: ${{ vars.SNAP_COUNT }}
       run: python main.py
