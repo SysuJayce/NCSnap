@@ -1,10 +1,9 @@
 # NCSnap
-
 ![Python](https://img.shields.io/badge/python-3.11+-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![GitHub Actions](https://img.shields.io/badge/github%20actions-automated-blue.svg)
 
-**Netcup 自动创建快照并清理旧快照**
+**Netcup 自动创建快照并清理旧快照，默认每天北京时间早上 06:44 运行，可自行修改**
 
 ---
 
@@ -16,7 +15,32 @@
 
 ---
 
-### 配置结构
+## 使用教程
+
+### 1. 复刻项目
+
+点击右上角的 `Fork` 按钮，复刻项目到你的GitHub账户。
+
+### 2. 配置 Secrets
+
+进入你复刻的仓库，点击 `Settings` → `Secrets and variables` → `Actions`，点击 `New repository secret`：
+
+- **Name**: `NC_CONFIG`
+- **Value**: 你的JSON配置内容（参考下方JSON配置说明）
+
+### 3. 启用工作流
+
+进入 `Actions` 页面，点击 `Enable workflows` 启用自动运行。
+
+### 4. 测试运行
+
+点击 `Run workflow` 手动运行一次，确保配置正确。
+
+---
+
+## JSON 配置说明
+
+### 基本结构
 
 ```json
 {
@@ -77,7 +101,7 @@
 }
 ```
 
-### 推荐配置
+### 推荐格式
 
 如果所有服务器保留相同数量快照，可以使用字符串数组：
 
@@ -96,31 +120,7 @@
 }
 ```
 
-使用旧格式时，所有服务器默认保留 3 个快照
-
-### 混合格式
-
-可以在同一账户内混合使用新旧格式：
-
-```json
-{
-  "accounts": [
-    {
-      "username": "283861",
-      "password": "password123",
-      "servers": [
-        {
-          "name": "v2202505271811338415",
-          "snap_count": 5
-        },
-        "v2202505271811343529"
-      ]
-    }
-  ]
-}
-```
-
-字符串格式的服务器会自动转换为对象格式，snap_count 默认为 3
+使用简化格式时，所有服务器默认保留 3 个快照。
 
 ---
 
