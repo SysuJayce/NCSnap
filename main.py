@@ -323,7 +323,7 @@ def cleanup_snapshots(page, keep_count):
     
     logger.info("  快照清理完成")
 
-def process_server(page, server_config):
+def process_server(page, server_config, current_index, total_count):
     """处理单个服务器的快照操作"""
     server_name = server_config['name']
     keep_count = server_config['snap_count']
@@ -331,7 +331,7 @@ def process_server(page, server_config):
     # 脱敏显示服务器名
     masked_name = mask_string(server_name, 3, 3)
     
-    logger.info(f"开始处理服务器: {masked_name} (保留{keep_count}个快照)")
+    logger.info(f"[{current_index}/{total_count}] 处理服务器: {masked_name} (保留{keep_count}个快照)")
     
     try:
         # 选择服务器
@@ -381,9 +381,7 @@ def process_account(page, account_config, account_index, total_accounts):
         # 处理每个服务器
         success_count = 0
         for i, server_config in enumerate(servers, 1):
-            logger.info(f"[{i}/{len(servers)}] ", end="")
-            
-            if process_server(page, server_config):
+            if process_server(page, server_config, i, len(servers)):
                 success_count += 1
             
             # 服务器间添加分隔
@@ -408,7 +406,7 @@ def main():
     
     logger.info("NCSnap Start")
     logger.info(f"{beijing_time.strftime('%Y-%m-%d %H:%M:%S')}")
-    # logger.info(f"{len(accounts)}个账户, {total_servers}个服务器")
+    logger.info(f"{len(accounts)}个账户, {total_servers}个服务器")
     
     # 初始化浏览器
     browser_options = setup_browser()
