@@ -206,7 +206,7 @@ def get_current_snapshot_count(page):
                 valid_snapshots.append(name_cell.text.strip())
         
         count = len(valid_snapshots)
-        logger.info(f"当前快照数量: {count}")
+        # logger.info(f"当前快照数量: {count}")
         if count > 0:
             logger.info(f"现有快照: {', '.join(valid_snapshots)}")
         
@@ -410,12 +410,12 @@ def main():
     # 显示程序启动信息
     beijing_time = get_beijing_time()
     logger.info("NCSnap Go")
-    logger.info(f"启动时间: {beijing_time.strftime('%Y-%m-%d %H:%M:%S')} (北京时间)")
-    logger.info(f"配置账户数量: {len(accounts)}")
+    logger.info(f"{beijing_time.strftime('%Y-%m-%d %H:%M:%S')}")
+    # logger.info(f"配置账户数量: {len(accounts)}")
     
-    # 计算总服务器数量
-    total_servers = sum(len(account['servers']) for account in accounts)
-    logger.info(f"总服务器数量: {total_servers}")
+    # # 计算总服务器数量
+    # total_servers = sum(len(account['servers']) for account in accounts)
+    # logger.info(f"总服务器数量: {total_servers}")
     
     # 设置浏览器
     browser_options = setup_browser()
@@ -441,7 +441,7 @@ def main():
         end_time = get_beijing_time()
         logger.info("=" * 60)
         logger.info("所有任务执行完成")
-        logger.info(f"完成时间: {end_time.strftime('%Y-%m-%d %H:%M:%S')} (北京时间)")
+        logger.info(f"完成时间: {end_time.strftime('%Y-%m-%d %H:%M:%S')} ")
         logger.info(f"处理账户: {len(accounts)} 个")
         logger.info(f"成功处理服务器: {total_success}/{total_servers_processed} 个")
         
