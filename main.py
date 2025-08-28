@@ -173,7 +173,7 @@ def select_server(page, server_name):
     search_box.input(server_name)
     time.sleep(1)
     
-    server_link = page.ele(f'xpath://a[contains(.//span, "{server_name}")]')
+    server_link = page.ele(f'xpath://a[contains(text(), "{server_name}")]')
     server_link.click()
     
     logger.info("  服务器选择完成")
