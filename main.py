@@ -159,24 +159,38 @@ def login_scp(page, username, password):
 
 def select_server(page, server_name):
     """选择指定服务器"""
-    # 等待服务器选择器加载
-    page.ele('@id:navSelect')
-    time.sleep(2)
-    
-    # 点击下拉菜单
-    select_button = page.ele('css:.btn.dropdown-toggle')
-    select_button.click()
-    time.sleep(1)
-    
-    # 搜索并选择服务器
-    search_box = page.ele('css:.bs-searchbox input')
-    search_box.input(server_name)
-    time.sleep(1)
-    
-    server_link = page.ele(f'xpath://a[contains(text(), "{server_name}")]')
-    server_link.click()
-    
-    logger.info("  服务器选择完成")
+    try:
+        # 等待服务器选择器加载
+        page.ele('@id:navSelect', timeout=10)
+        
+        # 点击下拉菜单
+        select_button = page.ele('css:.btn.dropdown-toggle', timeout=10)
+        select_button.click()
+        
+        # 等待下拉菜单展开
+        page.wait(1)
+        
+        # 搜索并选择服务器
+        search_box = page.ele('css:.bs-searchbox input', timeout=10)
+        search_box.clear()  # 清空搜索框
+        search_box.input(server_name)
+        
+        # 等待搜索结果出现
+        page.wait(2)
+        
+        # 更精确的XPath定位，增加等待时间
+        xpath_expr = f'//a[.//span[contains(text(), "{server_name}")]]'
+        server_link = page.ele(xpath=xpath_expr, timeout=15)
+        server_link.click()
+        
+        logger.info("  服务器选择完成")
+        return True
+        
+    except Exception as e:
+        logger.error(f"选择服务器失败: {str(e)}")
+        logger.error(f"尝试定位的服务器名称: {server_name}")
+        # 可以在这里添加截图等调试信息
+        return False
 
 def navigate_to_snapshots(page):
     """导航到快照管理页面"""
