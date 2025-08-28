@@ -3,13 +3,13 @@ name: NCSnap
 on:
   workflow_dispatch:
   schedule:
-    - cron: '00 20 * * *'  # 北京时间早上04:00 (UTC时间20:00)
+    - cron: '44 22 * * *'  # 北京时间早上06:44 (UTC时间22:44)
 
 jobs:
   NCSnap:
     runs-on: ubuntu-latest
     container:
-      image: zenika/alpine-chrome:with-py3
+      image: zenika/alpine-chrome
       options: --shm-size=2gb
       
     env:
@@ -25,7 +25,8 @@ jobs:
         ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
         
         echo "Installing Python dependencies"
-        pip install DrissionPage
+        apk add --no-cache python3 py3-pip
+        pip3 install DrissionPage
         
         echo "Creating config file"
         echo '${{ secrets.NC_CONFIG }}' > config.json
@@ -34,7 +35,7 @@ jobs:
       id: run_ncsnap
       run: |
         echo "Starting NCSnap at $(date)"
-        python main.py
+        python3 main.py
         echo "NCSnap finished at $(date)"
       continue-on-error: true
 
