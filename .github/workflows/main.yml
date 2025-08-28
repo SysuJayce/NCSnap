@@ -3,7 +3,7 @@ name: NCSnap
 on:
   workflow_dispatch:
   schedule:
-    - cron: '44 22 * * *'
+    - cron: '00 20 * * *'
 
 jobs:
   NCSnap:
