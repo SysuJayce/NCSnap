@@ -178,22 +178,10 @@ def select_server(page, server_name):
         # 等待搜索结果出现
         page.wait(2)
         
-        # 尝试多种XPath表达式来定位服务器链接
-        # 首先尝试精确匹配文本
-        xpath_expr = f'xpath://a[.//span[text()="{server_name}"]]'
-        try:
-            server_link = page.ele(xpath_expr, timeout=5)
-        except:
-            # 如果精确匹配失败，尝试包含文本的匹配
-            xpath_expr = f'xpath://a[.//span[contains(text(), "{server_name}")]]'
-            try:
-                server_link = page.ele(xpath_expr, timeout=5)
-            except:
-                # 如果还失败，尝试直接匹配链接文本
-                xpath_expr = f'xpath://a[contains(text(), "{server_name}")]'
-                server_link = page.ele(xpath_expr, timeout=5)
-        
-        server_link.click()
+        # 根据HTML结构，使用正确的XPath表达式查找包含服务器名称的选项
+        # 服务器名称在<option>标签的value属性中，显示文本可能是不同的（如smartcube）
+        option_element = page.ele(f'xpath://option[contains(@value, "{server_name}")]', timeout=10)
+        option_element.click()
         
         logger.info("  服务器选择完成")
         return True
