@@ -3,15 +3,11 @@ name: NCSnap
 on:
   workflow_dispatch:
   schedule:
-    - cron: '44 22 * * *'  # 北京时间早上06:44 (UTC时间22:44)
+    - cron: '00 20 * * *'  # 北京时间早上04:00 (UTC时间20:00)
 
 jobs:
   NCSnap:
     runs-on: ubuntu-latest
-    container:
-      image: zenika/alpine-chrome
-      options: --shm-size=2gb
-      
     env:
       TZ: Asia/Shanghai
     
@@ -19,14 +15,33 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Setup Python and dependencies
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+        
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Cache DrissionPage chromium
+      id: cache-chromium
+      uses: actions/cache@v3
+      with:
+        path: ~/.drissionpage
+        key: ${{ runner.os }}-chromium
+
+    - name: Prepare environment
       run: |
         echo "Setting timezone to Asia/Shanghai"
-        ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+        sudo timedatectl set-timezone Asia/Shanghai
         
         echo "Installing Python dependencies"
-        apk add --no-cache python3 py3-pip
-        pip3 install DrissionPage
+        pip install DrissionPage
         
         echo "Creating config file"
         echo '${{ secrets.NC_CONFIG }}' > config.json
@@ -35,7 +50,7 @@ jobs:
       id: run_ncsnap
       run: |
         echo "Starting NCSnap at $(date)"
-        python3 main.py
+        python main.py
         echo "NCSnap finished at $(date)"
       continue-on-error: true
 
