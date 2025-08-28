@@ -178,9 +178,9 @@ def select_server(page, server_name):
         # 等待搜索结果出现
         page.wait(2)
         
-        # 更精确的XPath定位，增加等待时间
-        xpath_expr = f'//a[.//span[contains(text(), "{server_name}")]]'
-        server_link = page.ele(xpath=xpath_expr, timeout=15)
+        # 使用正确的xpath前缀方式
+        xpath_expr = f'xpath://a[.//span[contains(text(), "{server_name}")]]'
+        server_link = page.ele(xpath_expr, timeout=15)
         server_link.click()
         
         logger.info("  服务器选择完成")

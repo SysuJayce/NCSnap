@@ -3,7 +3,7 @@
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![GitHub Actions](https://img.shields.io/badge/github%20actions-automated-blue.svg)
 
-**Netcup 自动创建快照并清理旧快照，默认每天北京时间早上 06:44 运行，可自行修改**
+**Netcup 自动创建快照并清理旧快照，默认每天北京时间早上 04:00 运行，可自行修改**
 
 ---
 

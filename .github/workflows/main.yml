@@ -3,26 +3,52 @@ name: NCSnap
 on:
   workflow_dispatch:
   schedule:
-    - cron: '00 20 * * *'
+    - cron: '00 20 * * *'  # 北京时间早上04:00 (UTC时间20:00)
 
 jobs:
   NCSnap:
     runs-on: ubuntu-latest
+    container:
+      image: zenika/alpine-chrome:with-py3
+      options: --shm-size=2gb
+      
     env:
       TZ: Asia/Shanghai
     
     steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
-        
-    - name: 环境准备
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Python and dependencies
       run: |
-        sudo timedatectl set-timezone Asia/Shanghai
-        sudo apt-get update && sudo apt-get install -y google-chrome-stable
+        echo "Setting timezone to Asia/Shanghai"
+        ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+        
+        echo "Installing Python dependencies"
         pip install DrissionPage
+        
+        echo "Creating config file"
         echo '${{ secrets.NC_CONFIG }}' > config.json
         
-    - name: NCSnap
-      run: python main.py
+    - name: Run NCSnap
+      id: run_ncsnap
+      run: |
+        echo "Starting NCSnap at $(date)"
+        python main.py
+        echo "NCSnap finished at $(date)"
+      continue-on-error: true
+
+    - name: Check execution result
+      run: |
+        if [ '${{ steps.run_ncsnap.outcome }}' == 'failure' ]; then
+          echo "NCSnap execution failed"
+          exit 1
+        else
+          echo "NCSnap execution succeeded"
+        fi
+
+    - name: Cleanup
+      if: always()
+      run: |
+        echo "Workflow completed at $(date)"
+        echo "Status: ${{ job.status }}"
