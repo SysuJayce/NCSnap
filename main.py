@@ -178,9 +178,21 @@ def select_server(page, server_name):
         # 等待搜索结果出现
         page.wait(2)
         
-        # 使用正确的xpath前缀方式
-        xpath_expr = f'xpath://a[.//span[contains(text(), "{server_name}")]]'
-        server_link = page.ele(xpath_expr, timeout=15)
+        # 尝试多种XPath表达式来定位服务器链接
+        # 首先尝试精确匹配文本
+        xpath_expr = f'xpath://a[.//span[text()="{server_name}"]]'
+        try:
+            server_link = page.ele(xpath_expr, timeout=5)
+        except:
+            # 如果精确匹配失败，尝试包含文本的匹配
+            xpath_expr = f'xpath://a[.//span[contains(text(), "{server_name}")]]'
+            try:
+                server_link = page.ele(xpath_expr, timeout=5)
+            except:
+                # 如果还失败，尝试直接匹配链接文本
+                xpath_expr = f'xpath://a[contains(text(), "{server_name}")]'
+                server_link = page.ele(xpath_expr, timeout=5)
+        
         server_link.click()
         
         logger.info("  服务器选择完成")
@@ -189,7 +201,6 @@ def select_server(page, server_name):
     except Exception as e:
         logger.error(f"选择服务器失败: {str(e)}")
         logger.error(f"尝试定位的服务器名称: {server_name}")
-        # 可以在这里添加截图等调试信息
         return False
 
 def navigate_to_snapshots(page):
